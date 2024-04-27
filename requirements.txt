@@ -1,0 +1,6 @@
+fastapi
+celery
+kombu
+flwr
+pygit2
+pyyaml
