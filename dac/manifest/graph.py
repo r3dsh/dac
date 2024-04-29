@@ -71,7 +71,7 @@ class ManifestsGraph:
                                 if manifest2.metadata.labels and label in manifest2.metadata.labels and manifest1.metadata.labels[
                                     label] == \
                                         manifest2.metadata.labels[label]:
-                                    print("adding edge:", node1, node2)
+                                    # print("adding edge:", node1, node2)
                                     self.graph.add_edge(node1, node2)
 
     def get_pods_in_namespace(self, namespace):

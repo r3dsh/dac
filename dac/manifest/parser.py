@@ -4,7 +4,6 @@ from pathlib import Path
 
 import yaml
 from fastapi import HTTPException, APIRouter
-from pyvis.network import Network
 
 from dac import logging
 from dac.manifest.graph import ManifestsGraph
@@ -46,16 +45,6 @@ class ManifestParser:
         with open(file_path, 'r') as file:
             return self.parse_manifest(file)
 
-    def visualize_graph(self, graph, path='graph.html'):
-        nt = Network()
-        for node, data in graph.nodes(data=True):
-            manifest = data['manifest']
-            nt.add_node(node, label=manifest.metadata.name)
-        for edge in graph.edges():
-            nt.add_edge(edge[0], edge[1])
-        nt.write_html(path)
-        nt.show(path)
-
     def parse_manifest(self, file):
         from dac.manifest import Manifest
 
@@ -66,29 +55,24 @@ class ManifestParser:
                 # print("[NOTICE] no supported manifest in", file.name)
                 return {}
 
-            log.warning(f"manifest namespace: {man.metadata.namespace}")
+            # log.warning(f"manifest namespace: {man.metadata.namespace}")
             namespace = "default"
             if man.metadata.namespace:
                 namespace = man.metadata.namespace
 
-            parsed_manifest = {
-                'apiVersion': man.apiVersion,
-                'kind': man.kind,
-                'metadata': man.metadata,
-                'spec': man.spec
-            }
-
             # TODO: this here has to be replaced with dac.manifest.graph
             # TODO: this here has to be replaced with dac.manifest.graph
             # TODO: this here has to be replaced with dac.manifest.graph
-            # TODO: this here has to be replaced with dac.manifest.graph
-            self.manifests_map[man.metadata.name] = parsed_manifest
-            self.manifests.setdefault(namespace, {})[man.metadata.name] = parsed_manifest
+            # TODO:
+            # TODO: right now small1.py somehow depends on two lines below
+            # TODO: right now small1.py somehow depends on two lines below
+            self.manifests_map[man.metadata.name] = man
+            self.manifests.setdefault(namespace, {})[man.metadata.name] = man
 
             if man.kind != "CustomResourceDefinition":
                 man.metadata.namespace = namespace
 
-            log.info(f"adding {man.metadata.name} to namespace {man.metadata.namespace}")
+            log.debug(f"adding {man.metadata.name} to namespace {man.metadata.namespace}")
             self.graph.add_manifest(man)
 
         return self.manifests

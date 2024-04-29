@@ -6,6 +6,6 @@ def handle(spec):
 
 
 def validate(spec):
-    print("         ", __name__, "VALIDATE", spec)
+    print("         ", __name__, "VVVVALIDATE", spec)
 
     return True
