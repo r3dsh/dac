@@ -1,0 +1,24 @@
+apiVersion: apiextensions.r3d.sh/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clients.dac.r3d.sh
+  namespace: homelab
+spec:
+  group: dac.r3d.sh
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      builtin:
+        name: http
+        spec:
+          url: "http://localhost"
+          method: "GET"
+  scope: Cluster
+  names:
+    plural: httpclients
+    singular: httpclient
+    kind: HttpClient
+    shortNames:
+    - hc
