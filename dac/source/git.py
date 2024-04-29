@@ -31,8 +31,6 @@ class Git(Source):
         pass
 
 
-
-
 import time
 import git
 import os
@@ -48,6 +46,11 @@ branch_name = "main"
 check_interval = 10
 
 
+def check_repo():
+    print("checking repo")
+    return "checked"
+
+
 def lsremote(url):
     remote_refs = {}
     g = git.cmd.Git()
@@ -57,23 +60,24 @@ def lsremote(url):
     return remote_refs
 
 
-print(f"monitoring {repo_path}@{branch_name}")
+def monitoring():
+    print(f"monitoring {repo_path}@{branch_name}")
 
-# Clone repo to monit
-if not os.path.isdir(f"{local_path}-{branch_name}"):
-    git.Repo.clone_from(repo_path, f"{local_path}-{branch_name}", branch=branch_name, depth=1)
+    # Clone repo to monit
+    if not os.path.isdir(f"{local_path}-{branch_name}"):
+        git.Repo.clone_from(repo_path, f"{local_path}-{branch_name}", branch=branch_name, depth=1)
 
-repo = git.Repo(f"{local_path}-{branch_name}")
+    repo = git.Repo(f"{local_path}-{branch_name}")
 
-last_commit = lsremote(repo_path)['HEAD']
-while True:
-    current_commit = lsremote(repo_path)['HEAD']
-    if last_commit != current_commit:
-        print(f"change detected {current_commit}, pulling from repo")
-        repo.remotes['origin'].pull()
-        last_commit = current_commit
+    last_commit = lsremote(repo_path)['HEAD']
+    while True:
+        current_commit = lsremote(repo_path)['HEAD']
+        if last_commit != current_commit:
+            print(f"change detected {current_commit}, pulling from repo")
+            repo.remotes['origin'].pull()
+            last_commit = current_commit
 
-        commit_files = [file for file in repo.git.show(last_commit, name_only=True, format="%n").splitlines() if file]
-        print("files affected by change:", commit_files)
+            commit_files = [file for file in repo.git.show(last_commit, name_only=True, format="%n").splitlines() if file]
+            print("files affected by change:", commit_files)
 
-    time.sleep(check_interval)
+        time.sleep(check_interval)

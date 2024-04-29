@@ -1,5 +1,9 @@
 
-# GitStore
+# DAC
+
+# Cluster discovery
+
+Nodes should ping each other with git/source hashes(?), if hash is too old node should stop actions?
 
 
 # Definitions

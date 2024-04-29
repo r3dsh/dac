@@ -11,6 +11,13 @@ class CustomResourceVersion(BaseModel):
     Schema: Optional[Any] = Field(default=None, alias='schema')
 
 
+class CustomResourceDefinitionNames(BaseModel):
+    Plural: str = Field(default=None, alias='plural')
+    Singular: str = Field(default=None, alias='singular')
+    Kind: str = Field(default=None, alias='kind')
+    ShortNames: List[str] = Field(default=None, alias='shortNames')
+
+
 class CustomResourceDefinitionSpec(BaseModel):
     Group: str = Field(default=None, alias='group')
     Versions: List[CustomResourceVersion] = Field(default=None, alias='versions')
@@ -27,8 +34,15 @@ class CustomResourceDefinition(BaseModel):
 
 class OpenAPIV3Schema(BaseModel):
     # Define the schema fields here, this is just a draft
-    Type: str
-    Properties: Optional[Dict[str, str]] = None
+    Type: str = Field(default=None, alias='type')
+    Properties: Optional[Any] = Field(default=None, alias='properties')
+
+
+class BuiltinSchema(BaseModel):
+    # Define the schema fields here, this is just a draft
+    Name: str = Field(default=None, alias='name')
+    Namespace: str = Field(default=None, alias='namespace')
+    Spec: Dict[str, str] = Field(alias='spec')
 
 
 # Example usage
@@ -102,17 +116,17 @@ spec:
 
 import yaml
 
-for cry in [custom_resource_yaml, custom_resource_yaml2, custom_resource_yaml3]:
 # for cry in [custom_resource_yaml3]:
+for cry in [custom_resource_yaml, custom_resource_yaml2, custom_resource_yaml3]:
     custom_resource_data = yaml.safe_load_all(cry)
 
     for resource_data in custom_resource_data:
         # crd = CustomResourceDefinition(**resource_data)
-        print(resource_data)
+        # print(resource_data)
         try:
             crd = CustomResourceDefinition(**resource_data)
-            print(crd)
-            print(crd.Spec.Versions)
+            # print("CRD:", crd)
+            # print("CRD.spec.versions:", crd.Spec.Versions)
         except ValidationError as e:
             print(e)
 

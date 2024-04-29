@@ -1,6 +1,9 @@
 fastapi
-celery
-kombu
-flwr
 pygit2
 pyyaml
+email-validator
+fastapi-events
+fastapi_utils
+starlette
+uvicorn
+matplotlib

@@ -1,6 +1,10 @@
 import networkx as nx
 
-from gitstore.graph.model import Manifest
+from dac import logging
+from dac.manifest import Manifest
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 class ManifestsGraph:
@@ -39,6 +43,36 @@ class ManifestsGraph:
         - file_path (str): The path to save the graph data.
         """
         nx.write_gpickle(self.graph, file_path)
+
+    def connect(self):
+        log.info("connecting nodes")
+        # Connect nodes based on labels
+        for node1, data1 in self.graph.nodes(data=True):
+            for node2, data2 in self.graph.nodes(data=True):
+                if node1 != node2:
+                    manifest1 = data1['manifest']
+                    manifest2 = data2['manifest']
+
+                    if not manifest1.metadata.labels:
+                        manifest1.metadata.labels = {}
+
+                    if not manifest2.metadata.labels:
+                        manifest2.metadata.labels = {}
+
+                    if 'namespace' not in manifest1.metadata.labels:
+                        manifest1.metadata.labels['namespace'] = manifest1.metadata.namespace
+
+                    if 'namespace' not in manifest2.metadata.labels:
+                        manifest2.metadata.labels['namespace'] = manifest2.metadata.namespace
+
+                    if manifest1.metadata.namespace == manifest2.metadata.namespace:
+                        if manifest1.metadata.labels:
+                            for label in manifest1.metadata.labels:
+                                if manifest2.metadata.labels and label in manifest2.metadata.labels and manifest1.metadata.labels[
+                                    label] == \
+                                        manifest2.metadata.labels[label]:
+                                    print("adding edge:", node1, node2)
+                                    self.graph.add_edge(node1, node2)
 
     def get_pods_in_namespace(self, namespace):
         """

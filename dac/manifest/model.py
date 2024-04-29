@@ -5,8 +5,8 @@ from pydantic import BaseModel, PrivateAttr, Field
 
 class Metadata(BaseModel):
     name: str
-    namespace: str
-    labels: Dict[str, str]
+    namespace: Optional[str] = None
+    labels: Optional[Dict[str, str]] = None
     annotations: Dict[str, Any] = {}  # Default value is an empty dictionary
 
 

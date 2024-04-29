@@ -1,65 +1,95 @@
 import copy
-import logging
 import os
 from pathlib import Path
 
 import yaml
 from fastapi import HTTPException, APIRouter
+from pyvis.network import Network
 
-log = logging.getLogger()
+from dac import logging
+from dac.manifest.graph import ManifestsGraph
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 class ManifestParser:
     def __init__(self, dir_paths):
         self.dir_paths = dir_paths
         self.manifests = {}
+        self.graph = ManifestsGraph()
         self.manifests_map = {}
         self.manifest_files = {}
 
     def load_all(self):
+        log.debug(f"available directories {self.dir_paths}")
         for dir_path in self.dir_paths:
+            log.debug(f"searching in {dir_path}")
             for path in Path(dir_path).rglob('*.y*ml'):
-                # print("FOUND MANIFEST:", str(path))
+                if path.name[0] == "_":
+                    continue
+                # log.debug(f"FOUND MANIFEST: {str(path)}")
 
                 file_path = path.name.replace(dir_path + os.sep, '')
                 file_path = "/".join([dir_path, file_path])
 
                 self.manifest_files[file_path] = {'path': file_path, 'file': self.load(path)}
+
+        # connect the graph
+        self.graph.connect()
+
         return self.manifests
 
     def load(self, file_path):
-        log.info(f"loading: {file_path}")
+        # log.debug(f"loading: {file_path}")
 
         with open(file_path, 'r') as file:
             return self.parse_manifest(file)
 
+    def visualize_graph(self, graph, path='graph.html'):
+        nt = Network()
+        for node, data in graph.nodes(data=True):
+            manifest = data['manifest']
+            nt.add_node(node, label=manifest.metadata.name)
+        for edge in graph.edges():
+            nt.add_edge(edge[0], edge[1])
+        nt.write_html(path)
+        nt.show(path)
+
     def parse_manifest(self, file):
-        # TODO: Handle invalid manifests and corrupted yaml files!
-        # TODO: Handle invalid manifests and corrupted yaml files!
-        # TODO: Handle invalid manifests and corrupted yaml files!
-        # TODO: Handle invalid manifests and corrupted yaml files!
+        from dac.manifest import Manifest
+
         for manifest in yaml.safe_load_all(file):
-            print(manifest)
-            kind = manifest.get('kind')
-            if not kind:
+            man = Manifest(**manifest)
+
+            if not man.kind:
                 # print("[NOTICE] no supported manifest in", file.name)
                 return {}
 
-            metadata = manifest.get('metadata', {})
-            namespace = metadata.get('namespace')
-            name = metadata.get('name')
+            log.warning(f"manifest namespace: {man.metadata.namespace}")
+            namespace = "default"
+            if man.metadata.namespace:
+                namespace = man.metadata.namespace
 
             parsed_manifest = {
-                'apiVersion': manifest.get('apiVersion'),
-                'kind': manifest.get('kind'),
-                'metadata': metadata,
-                'spec': manifest.get('spec')
+                'apiVersion': man.apiVersion,
+                'kind': man.kind,
+                'metadata': man.metadata,
+                'spec': man.spec
             }
 
-            self.manifests_map[name] = parsed_manifest
+            # TODO: this here has to be replaced with dac.manifest.graph
+            # TODO: this here has to be replaced with dac.manifest.graph
+            # TODO: this here has to be replaced with dac.manifest.graph
+            # TODO: this here has to be replaced with dac.manifest.graph
+            self.manifests_map[man.metadata.name] = parsed_manifest
+            self.manifests.setdefault(namespace, {})[man.metadata.name] = parsed_manifest
 
-            if namespace and name:
-                self.manifests.setdefault(namespace, {})[name] = parsed_manifest
+            if man.kind != "CustomResourceDefinition":
+                man.metadata.namespace = namespace
+
+            log.info(f"adding {man.metadata.name} to namespace {man.metadata.namespace}")
+            self.graph.add_manifest(man)
 
         return self.manifests
 
@@ -92,65 +122,65 @@ class ManifestParser:
         print("ManifestParser reloaded")
 
 
-class Manifest:
-
-    def __init__(self, name: str, manifest_parser: ManifestParser):
-        self.name = name
-        self.router = APIRouter()
-        self.router.add_api_route("/", self.dump_all, methods=["GET"])
-        self.router.add_api_route("/{ns}", self.dump_namespace, methods=["GET"])
-        self.router.add_api_route("/{ns}/{name}", self.dump_manifest, methods=["GET"])
-
-        self.manifest_parser = manifest_parser
-        self.manifests = self.manifest_parser.load_all()
-
-    def custom_json_dump(self, obj, depth=0, max_depth=3):
-        if depth >= int(max_depth):
-            return str(obj)
-
-        if isinstance(obj, dict):
-            return {key: self.custom_json_dump(value, depth + 1, max_depth) for key, value in obj.items()}
-        elif isinstance(obj, list):
-            return [self.custom_json_dump(item, depth + 1, max_depth) for item in obj]
-        elif hasattr(obj, '__dict__'):
-            return self.custom_json_dump(obj.__dict__, depth + 1, max_depth)
-        else:
-            return obj
-
-    def dump_all(self, max_depth=5, resolve_references: bool = False):
-        print(max_depth, resolve_references, self.manifests)
-        output = copy.deepcopy(self.manifests)
-
-        # resolving references
-        if resolve_references == True:
-            for ns in output:
-                for name in output[ns]:
-                    manifest = output[ns][name]
-
-                    if 'ref' in manifest['spec'] and manifest['spec']['ref'] in self.manifest_parser.manifests_map:
-                        print(">>", manifest['spec']['ref'])
-                        output[ns][name]['spec']['ref'] = self.manifest_parser.manifests_map[manifest['spec']['ref']]
-
-        return {"Hello": self.custom_json_dump(output, max_depth=max_depth), "parser": self.manifest_parser}
-
-    def dump_namespace(self, ns):
-        output = copy.deepcopy(self.manifests)
-
-        if ns not in output:
-            raise HTTPException(status_code=404, detail="namespace not found")
-
-        return output[ns]
-
-    def dump_manifest(self, ns, name):
-        output = copy.deepcopy(self.manifests)
-
-        if ns not in output:
-            raise HTTPException(status_code=404, detail="namespace not found")
-
-        if name not in output[ns]:
-            raise HTTPException(status_code=404, detail="manifest not found")
-
-        return output[ns][name]
+# class Manifest:
+#
+#     def __init__(self, name: str, manifest_parser: ManifestParser):
+#         self.name = name
+#         self.router = APIRouter()
+#         self.router.add_api_route("/", self.dump_all, methods=["GET"])
+#         self.router.add_api_route("/{ns}", self.dump_namespace, methods=["GET"])
+#         self.router.add_api_route("/{ns}/{name}", self.dump_manifest, methods=["GET"])
+#
+#         self.manifest_parser = manifest_parser
+#         self.manifests = self.manifest_parser.load_all()
+#
+#     def custom_json_dump(self, obj, depth=0, max_depth=3):
+#         if depth >= int(max_depth):
+#             return str(obj)
+#
+#         if isinstance(obj, dict):
+#             return {key: self.custom_json_dump(value, depth + 1, max_depth) for key, value in obj.items()}
+#         elif isinstance(obj, list):
+#             return [self.custom_json_dump(item, depth + 1, max_depth) for item in obj]
+#         elif hasattr(obj, '__dict__'):
+#             return self.custom_json_dump(obj.__dict__, depth + 1, max_depth)
+#         else:
+#             return obj
+#
+#     def dump_all(self, max_depth=5, resolve_references: bool = False):
+#         # print(max_depth, resolve_references, self.manifests)
+#         output = copy.deepcopy(self.manifests)
+#
+#         # resolving references
+#         if resolve_references == True:
+#             for ns in output:
+#                 for name in output[ns]:
+#                     manifest = output[ns][name]
+#
+#                     if 'ref' in manifest['spec'] and manifest['spec']['ref'] in self.manifest_parser.manifests_map:
+#                         # print(">>", manifest['spec']['ref'])
+#                         output[ns][name]['spec']['ref'] = self.manifest_parser.manifests_map[manifest['spec']['ref']]
+#
+#         return {"Hello": self.custom_json_dump(output, max_depth=max_depth), "parser": self.manifest_parser}
+#
+#     def dump_namespace(self, ns):
+#         output = copy.deepcopy(self.manifests)
+#
+#         if ns not in output:
+#             raise HTTPException(status_code=404, detail="namespace not found")
+#
+#         return output[ns]
+#
+#     def dump_manifest(self, ns, name):
+#         output = copy.deepcopy(self.manifests)
+#
+#         if ns not in output:
+#             raise HTTPException(status_code=404, detail="namespace not found")
+#
+#         if name not in output[ns]:
+#             raise HTTPException(status_code=404, detail="manifest not found")
+#
+#         return output[ns][name]
 
 
 class Exec:
@@ -178,7 +208,7 @@ class Exec:
                 manifest = output[ns][name]
 
                 if 'ref' in manifest['spec'] and manifest['spec']['ref'] in self.manifest_parser.manifests_map:
-                    print(">>", manifest['spec']['ref'])
+                    # print(">>", manifest['spec']['ref'])
                     output[ns][name]['spec']['ref'] = self.manifest_parser.manifests_map[manifest['spec']['ref']]
 
         results = self.manifest_parser.route_handlers()
@@ -199,7 +229,7 @@ class Exec:
                 manifest = output[ns][name]
 
                 if 'ref' in manifest['spec'] and manifest['spec']['ref'] in self.manifest_parser.manifests_map:
-                    print(">>", manifest['spec']['ref'])
+                    # print(">>", manifest['spec']['ref'])
                     output[ns][name]['spec']['ref'] = self.manifest_parser.manifests_map[manifest['spec']['ref']]
 
         results = self.manifest_parser.route_handlers()
