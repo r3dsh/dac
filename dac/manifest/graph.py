@@ -1,7 +1,7 @@
 import networkx as nx
 
 from dac import logging
-from dac.manifest import Manifest
+from dac.manifest.model import Manifest
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -68,11 +68,20 @@ class ManifestsGraph:
                     if manifest1.metadata.namespace == manifest2.metadata.namespace:
                         if manifest1.metadata.labels:
                             for label in manifest1.metadata.labels:
-                                if manifest2.metadata.labels and label in manifest2.metadata.labels and manifest1.metadata.labels[
-                                    label] == \
+                                if manifest2.metadata.labels and label in manifest2.metadata.labels and \
+                                        manifest1.metadata.labels[
+                                            label] == \
                                         manifest2.metadata.labels[label]:
                                     # print("adding edge:", node1, node2)
                                     self.graph.add_edge(node1, node2)
+
+    def get_resources_kind(self, kind):
+        matching_resources = []
+        for node, data in self.graph.nodes(data=True):
+            manifest = data['manifest']
+            if manifest.kind == kind:
+                matching_resources.append(manifest)
+        return matching_resources
 
     def get_pods_in_namespace(self, namespace):
         """
