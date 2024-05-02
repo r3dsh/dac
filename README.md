@@ -1,6 +1,8 @@
 
 # DAC
 
+![Alt Text](examples/boot.gif)
+
 Output from examples/invoking_crds.py
 
 ```shell
